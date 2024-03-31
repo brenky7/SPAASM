@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "client_lib.h"
-#include "server_lib.h"
+#include "my_libs/client_lib.h"
+#include "my_libs/server_lib.h"
 
 //ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-dss -c aes128-cbc xbrenkus@student.fiit.stuba.sk
 
