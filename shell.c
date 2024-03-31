@@ -13,8 +13,15 @@ typedef enum {
 } bool;
 
 void displayHelp() {
-    printf("Help - Display help information\n");
-    printf("Exit - Exit the shell\n");
+    printf("------ Usage: ./shell [-s | -c] [-p port] ------\n");
+    printf("Author: Peter Brenkus, xbrenkus@stuba.sk\n");
+    printf("Options:\n");
+    printf("  -s\tRun as server\n");
+    printf("  -c\tRun as client\n");
+    printf("  -p\tPort number\n");
+    printf("  -h\tDisplay help\n");
+    printf("Or alternatively run the program without any arguments for basic I/O mode.\n");
+    printf("------ Supported commands ------\n\thelp\n\texit\n\tport\n");
 }
 
 void getCurrentTime(char *timeString) {
@@ -22,7 +29,7 @@ void getCurrentTime(char *timeString) {
     struct tm *localTime;
     time(&currentTime);
     localTime = localtime(&currentTime);
-    strftime(timeString, 9, "%H:%M", localTime); // Format: HH:MM
+    strftime(timeString, 9, "%H:%M", localTime);
 }
 
 void getHostname(char *hostname, int size) {
@@ -60,28 +67,34 @@ int main(int argc, char *argv[]) {
             } else if (strcmp(argv[i], "-c") == 0) {
                 client = true;
             } else if (strcmp(argv[i], "-p") == 0) {
-                port = atoi(argv[i + 1]);
-                if (port == 0) {
-                    printf("Invalid port number... shutting down.\n");
-                    exit(EXIT_FAILURE);
-                }
-                else{
-                    printf("Port number: %d\n", port);
-                }
+               if (i + 1 < argc) {
+                   port = atoi(argv[i + 1]);
+                   if (port == 0) {
+                       printf("Invalid port number... use 'port command to set'.\n");
+                   } else {
+                       printf("Port number: %d\n", port);
+                   }
+               }
+               else{
+                     printf("No port number specified... use 'port' command to set.\n");
+               }
             } else if (strcmp(argv[i], "-h") == 0) {
-                printf("Usage: %s [-s | -c] [-p port]\n", argv[0]);
-                printf("Author: Peter Brenkus, xbrenkus@stuba.sk\n");
-                printf("Options:\n");
-                printf("  -s\tRun as server\n");
-                printf("  -c\tRun as client\n");
-                printf("  -p\tPort number\n");
-                printf("  -h\tDisplay help\n");
-                printf("Or alternatively run the program without any arguments for basic I/O mode.\n");
+                displayHelp();
             }
         }
     }
-    if (!server && !client){
-        printf("No command-line arguments... basic mode.\n");
+    if (server == true && client == true) {
+        printf("Cannot run in both server and client mode.\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (server == false && client == true) {
+        printf("Running in client mode.\n");
+    }
+    else if (server == true && client == false) {
+        printf("Running in server mode.\n");
+    }
+    else {
+        printf("No mode specified... running basic mode.\n");
     }
 
 
@@ -91,14 +104,32 @@ int main(int argc, char *argv[]) {
         printf("%s", prompt);
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
-
-        if (strcmp(command, "help") == 0) {
-            displayHelp();
-        } else if (strcmp(command, "exit") == 0) {
-            printf("Exiting the shell.\n");
-            break;
-        } else {
-            printf("Unknown command: %s\n", command);
+        char *token = strtok(command, " ");
+        if (token != NULL) {
+            if (strcmp(token, "port") == 0) {
+                token = strtok(NULL, " ");
+                if (token != NULL) {
+                    port = atoi(token);
+                    printf("Port number set to %d\n", port);
+                } else {
+                    printf("Port number not specified, current: %d\n", port);
+                }
+            }
+            else if (strcmp(token, "server") == 0) {
+                server = true;
+                printf("Running in server mode.\n");
+                printf("Port number: %d, use 'port' command to set.\n", port);
+            }
+            else if (strcmp(token, "help") == 0) {
+                displayHelp();
+            }
+            else if (strcmp(token, "exit") == 0) {
+                printf("Shutting down.\n");
+                break;
+            }
+            else {
+                printf("Unknown command: %s\n", token);
+            }
         }
     }
 
