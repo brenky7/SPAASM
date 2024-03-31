@@ -101,13 +101,13 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "client_lib.c",
+			"path" : "my_libs/client_lib.c",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "server_lib.c",
+			"path" : "my_libs/server_lib.c",
 			"sourceGroupIndex" : 0
 		}
 	],

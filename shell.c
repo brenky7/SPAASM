@@ -7,6 +7,10 @@
 #include "my_libs/server_lib.h"
 
 //ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-dss -c aes128-cbc xbrenkus@student.fiit.stuba.sk
+typedef enum {
+    false,
+    true
+} bool;
 
 void displayHelp() {
     printf("Help - Display help information\n");
@@ -46,11 +50,38 @@ char* getPrompt() {
 
 
 int main(int argc, char *argv[]) {
+    int port = 0;
+    bool server = false;
+    bool client = false;
     if (argc > 1) {
-        printf("Command-line arguments:\n");
         for (int i = 1; i < argc; i++) {
-            printf("%s\n", argv[i]);
+            if (strcmp(argv[i], "-s") == 0) {
+                server = true;
+            } else if (strcmp(argv[i], "-c") == 0) {
+                client = true;
+            } else if (strcmp(argv[i], "-p") == 0) {
+                port = atoi(argv[i + 1]);
+                if (port == 0) {
+                    printf("Invalid port number... shutting down.\n");
+                    exit(EXIT_FAILURE);
+                }
+                else{
+                    printf("Port number: %d\n", port);
+                }
+            } else if (strcmp(argv[i], "-h") == 0) {
+                printf("Usage: %s [-s | -c] [-p port]\n", argv[0]);
+                printf("Author: Peter Brenkus, xbrenkus@stuba.sk\n");
+                printf("Options:\n");
+                printf("  -s\tRun as server\n");
+                printf("  -c\tRun as client\n");
+                printf("  -p\tPort number\n");
+                printf("  -h\tDisplay help\n");
+                printf("Or alternatively run the program without any arguments for basic I/O mode.\n");
+            }
         }
+    }
+    if (!server && !client){
+        printf("No command-line arguments... basic mode.\n");
     }
 
 
