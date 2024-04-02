@@ -10,11 +10,11 @@
 #define MAX_CLIENTS 10
 #define TIMEOUT 1 // seconds
 
-// Function to create a server socket
+// Function to create a server sock
 int create_server_socket(int port) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
-        perror("Error creating server socket");
+        perror("Error creating server sock");
         exit(EXIT_FAILURE);
     }
 
@@ -26,17 +26,17 @@ int create_server_socket(int port) {
 
     int flags = fcntl(server_socket, F_GETFL, 0);
     if (flags == -1) {
-        perror("Error getting socket flags");
+        perror("Error getting sock flags");
         exit(EXIT_FAILURE);
     }
 
     if (fcntl(server_socket, F_SETFL, flags | O_NONBLOCK) == -1) {
-        perror("Error setting socket to non-blocking mode");
+        perror("Error setting sock to non-blocking mode");
         exit(EXIT_FAILURE);
     }
 
     if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Error binding server socket");
+        perror("Error binding server sock");
         exit(EXIT_FAILURE);
     }
 
@@ -45,7 +45,7 @@ int create_server_socket(int port) {
 
 void start_listening(int server_socket) {
     if (listen(server_socket, MAX_CLIENTS) < 0) {
-        perror("Error listening on server socket");
+        perror("Error listening on server sock");
         exit(EXIT_FAILURE);
     }
 }
@@ -85,9 +85,9 @@ int send_message(int client_socket, const char *message) {
     return bytes_sent;
 }
 
-// Function to close server socket
-void close_server_socket(int server_socket, int server_connections[10]) {
-    for (int i = 0; i < 10; i++) {
+// Function to close server sock
+void close_server_socket(int server_socket, int server_connections[MAX_CLIENTS]) {
+    for (int i = 0; i < MAX_CLIENTS; i++) {
         if (server_connections[i] != -1) {
             close(server_connections[i]);
         }

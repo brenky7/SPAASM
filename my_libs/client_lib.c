@@ -14,7 +14,7 @@
 int create_client_socket() {
     int client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
-        perror("Error opening socket");
+        perror("Error opening sock");
         exit(EXIT_FAILURE);
     }
     return client_socket;

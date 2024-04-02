@@ -3,6 +3,7 @@
 gcc -o shell shell.c ./my_libs/client_lib.c ./my_libs/server_lib.c
 
 if [ $? -eq 0 ]; then
+    echo " "
     echo "------------------ Compilation successful. ------------------"
 
     # Check if there are any command-line arguments
