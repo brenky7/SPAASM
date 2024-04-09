@@ -92,13 +92,66 @@ void handle_client(int client_socket, const int *server_running) {
         buffer[bytes_received] = '\0'; // Null-terminate the received data
         printf("\nReceived message from client: %s, press enter to continue.\n", buffer);
 
-        // Echo message back to client
-        if (send(client_socket, buffer, strlen(buffer), 0) == -1) {
-            perror("Error sending message to client");
-            close(client_socket);
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("Error creating pipe");
             exit(EXIT_FAILURE);
         }
 
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("Error forking process");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid == 0) { // Child process
+            // Redirect standard output to pipe write end
+            close(pipefd[0]); // Close unused read end
+            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe
+            close(pipefd[1]); // Close pipe write end
+            // Parse command and arguments
+            char *args[BUFFER_SIZE];
+            char *token;
+            token = strtok(buffer, " ");
+            int i = 0;
+            while (token != NULL) {
+                args[i++] = token;
+                token = strtok(NULL, " ");
+            }
+            args[i] = NULL;
+            // Execute the command
+            if (execvp(args[0], args) == -1) {
+                perror("Error executing command");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else { // Parent process
+            // Close unused write end of pipe
+            close(pipefd[1]);
+
+            // Read command output from pipe
+            char output_buffer[BUFFER_SIZE];
+            ssize_t bytes_read;
+            memset(output_buffer, 0, sizeof(output_buffer));
+            while ((bytes_read = read(pipefd[0], output_buffer, BUFFER_SIZE)) > 0) {
+                // Send output back to client
+                send(client_socket, output_buffer, bytes_read, 0);
+                memset(output_buffer, 0, sizeof(output_buffer));
+            }
+
+            // Close read end of pipe
+            close(pipefd[0]);
+
+            // Wait for child process to finish
+            int status;
+            waitpid(pid, &status, 0);
+
+            // Check if child process terminated normally
+            if (WIFEXITED(status)) {
+                printf("Command execution completed\n");
+            } else {
+                printf("Command execution failed\n");
+            }
+        }
         printf("Press enter to continue");
     }
     const char *closing_message = "closing";

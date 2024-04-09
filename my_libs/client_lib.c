@@ -96,9 +96,10 @@ void *client_listener(void *arg) {
             close(args->client_socket);
             exit(EXIT_SUCCESS);
         }
-        else{
+
+        if (bytes_received > 0) {
             buffer[bytes_received] = '\0'; // Null-terminate the received data
-            printf("\nReceived message from server: %s, press enter to continue...\n", buffer);
+            printf("\n%s\n", buffer);
         }
     }
     return NULL;
