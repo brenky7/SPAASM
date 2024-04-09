@@ -51,19 +51,25 @@ build cmake_object_order_depends_target_z2: phony || CMakeFiles/z2.dir
 
 build CMakeFiles/z2.dir/shell.c.o: C_COMPILER__z2_unscanned_Debug /Users/peterbrenkus/Desktop/skola/sem4/SPASM/z2/shell.c || cmake_object_order_depends_target_z2
   DEP_FILE = CMakeFiles/z2.dir/shell.c.o.d
-  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.2.sdk -fcolor-diagnostics
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -mmacosx-version-min=14.3 -fcolor-diagnostics
   OBJECT_DIR = CMakeFiles/z2.dir
   OBJECT_FILE_DIR = CMakeFiles/z2.dir
 
 build CMakeFiles/z2.dir/my_libs/client_lib.c.o: C_COMPILER__z2_unscanned_Debug /Users/peterbrenkus/Desktop/skola/sem4/SPASM/z2/my_libs/client_lib.c || cmake_object_order_depends_target_z2
   DEP_FILE = CMakeFiles/z2.dir/my_libs/client_lib.c.o.d
-  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.2.sdk -fcolor-diagnostics
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -mmacosx-version-min=14.3 -fcolor-diagnostics
   OBJECT_DIR = CMakeFiles/z2.dir
   OBJECT_FILE_DIR = CMakeFiles/z2.dir/my_libs
 
 build CMakeFiles/z2.dir/my_libs/server_lib.c.o: C_COMPILER__z2_unscanned_Debug /Users/peterbrenkus/Desktop/skola/sem4/SPASM/z2/my_libs/server_lib.c || cmake_object_order_depends_target_z2
   DEP_FILE = CMakeFiles/z2.dir/my_libs/server_lib.c.o.d
-  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.2.sdk -fcolor-diagnostics
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -mmacosx-version-min=14.3 -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/z2.dir
+  OBJECT_FILE_DIR = CMakeFiles/z2.dir/my_libs
+
+build CMakeFiles/z2.dir/my_libs/utils.c.o: C_COMPILER__z2_unscanned_Debug /Users/peterbrenkus/Desktop/skola/sem4/SPASM/z2/my_libs/utils.c || cmake_object_order_depends_target_z2
+  DEP_FILE = CMakeFiles/z2.dir/my_libs/utils.c.o.d
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -mmacosx-version-min=14.3 -fcolor-diagnostics
   OBJECT_DIR = CMakeFiles/z2.dir
   OBJECT_FILE_DIR = CMakeFiles/z2.dir/my_libs
 
@@ -75,8 +81,8 @@ build CMakeFiles/z2.dir/my_libs/server_lib.c.o: C_COMPILER__z2_unscanned_Debug /
 #############################################
 # Link the executable z2
 
-build z2: C_EXECUTABLE_LINKER__z2_Debug CMakeFiles/z2.dir/shell.c.o CMakeFiles/z2.dir/my_libs/client_lib.c.o CMakeFiles/z2.dir/my_libs/server_lib.c.o
-  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.2.sdk
+build z2: C_EXECUTABLE_LINKER__z2_Debug CMakeFiles/z2.dir/shell.c.o CMakeFiles/z2.dir/my_libs/client_lib.c.o CMakeFiles/z2.dir/my_libs/server_lib.c.o CMakeFiles/z2.dir/my_libs/utils.c.o
+  FLAGS = -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -mmacosx-version-min=14.3
   OBJECT_DIR = CMakeFiles/z2.dir
   POST_BUILD = :
   PRE_LINK = :

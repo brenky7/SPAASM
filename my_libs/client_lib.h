@@ -1,13 +1,10 @@
-
-
 #ifndef CLIENT_LIB_H
 #define CLIENT_LIB_H
 
-//int openSocket(const char *serverIP, int port);
-int create_client_socket();
-void connect_to(int client_socket, const char *serverIP, int port);
-void sendMessage(int server_socket, const char *message);
-void receiveMessage(int server_socket, char *buffer, int bufferSize);
+//int openSocket(const char *serverIP);
+int create_client_socket(int port);
+void connect_to_server(int client_socket, int server_port);
+void send_commands(int client_socket, const char *message);
+void *client_listener(void *arg);
 void close_client_socket(int client_socket);
-
 #endif

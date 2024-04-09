@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gcc -o shell shell.c ./my_libs/client_lib.c ./my_libs/server_lib.c
+gcc -o shell shell.c ./my_libs/client_lib.c ./my_libs/server_lib.c ./my_libs/utils.c
 
 if [ $? -eq 0 ]; then
     echo " "
