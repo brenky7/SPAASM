@@ -121,6 +121,9 @@ int main(int argc, char *argv[]) {
                     char *delimiter = ";";
                     char* command2 = strtok(message, delimiter);
                     while (command2 != NULL) {
+                        if (contains_hash(command2) == true) {
+                            break;
+                        }
                         send_commands(sock, command2);
                         usleep(1500000); // Sleep for 1 second
                         command2 = strtok(NULL, delimiter);

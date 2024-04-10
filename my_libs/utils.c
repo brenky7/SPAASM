@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include "utils.h"
 
@@ -60,3 +61,12 @@ char* getPrompt() {
     return prompt;
 }
 
+bool contains_hash(const char *str) {
+    while (*str != '\0') {
+        if (*str == '#' && *(str -1) != '\\') {
+            return true; // Found the '#' character
+        }
+        str++; // Move to the next character
+    }
+    return false; // '#' character not found
+}
