@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "my_libs/client_lib.h"
 #include "my_libs/server_lib.h"
 #include "my_libs/utils.h"
@@ -53,7 +54,11 @@ int main(int argc, char *argv[]) {
         sock = create_client_socket(port);
         printf("Running in client mode.\n");
     }
-    else if (client == false && server == true) {
+    else if ((client == false && server == true) || (client == false && server == false)) {
+        if (port == -1) {
+            port = 60000;
+            printf("Port number not specified. Using default port: %d\n", port);
+        }
         sock = create_server_socket(port);
         printf("Server socket: %d\n", sock);
         printf("Running in server mode.\n");
@@ -113,7 +118,13 @@ int main(int argc, char *argv[]) {
             else if (strcmp(token, "send") == 0) {
                 if (client == true) {
                     char *message = strtok(NULL, "");
-                    send_commands(sock, message);
+                    char *delimiter = ";";
+                    char* command2 = strtok(message, delimiter);
+                    while (command2 != NULL) {
+                        send_commands(sock, command2);
+                        usleep(1500000); // Sleep for 1 second
+                        command2 = strtok(NULL, delimiter);
+                    }
                 } else {
                     printf("Error: Not in client mode. Use '-c' command to change.\n");
                 }
@@ -137,6 +148,7 @@ int main(int argc, char *argv[]) {
             else if (strcmp(token, "halt") == 0) {
                 if (server == true) {
                     *server_running = 0;
+                    usleep(2000000); // Wait for server to stop
                     if (pthread_join(thread, NULL) != 0) {
                         perror("Error joining thread");
                         exit(EXIT_FAILURE);

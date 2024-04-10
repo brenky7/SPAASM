@@ -55,8 +55,6 @@ void connect_to_server(int client_socket, int server_port) {
 void send_commands(int client_socket, const char *message) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
-
-    // Send message to server
     if (send(client_socket, message, strlen(message), 0) == -1) {
         perror("Error sending message to server");
         close(client_socket);

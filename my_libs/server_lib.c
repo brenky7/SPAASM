@@ -49,7 +49,6 @@ int accept_client_connection(int server_socket) {
     int client_socket;
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
-
     // Accept incoming connection
     if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len)) == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -66,13 +65,16 @@ int accept_client_connection(int server_socket) {
 }
 
 
-void handle_client(int client_socket, const int *server_running) {
+void *handle_client(void *arg) {
+    struct ThreadArgs *client_args = (struct ThreadArgs *)arg;
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
-    while (*server_running == 1) {
+    //printf("debug_handle_client_1\n");
+    while (*client_args->server_running == 1) {
+        //printf("debug_handle_client_2\n");
         memset(buffer, 0, sizeof(buffer));
         // Receive message from client
-        if ((bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0)) == -1) {
+        if ((bytes_received = recv(client_args->client_socket, buffer, BUFFER_SIZE, 0)) == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // No data available, retry after a short delay
                 usleep(1000000); // 1 second
@@ -134,7 +136,7 @@ void handle_client(int client_socket, const int *server_running) {
             memset(output_buffer, 0, sizeof(output_buffer));
             while ((bytes_read = read(pipefd[0], output_buffer, BUFFER_SIZE)) > 0) {
                 // Send output back to client
-                send(client_socket, output_buffer, bytes_read, 0);
+                send(client_args->client_socket, output_buffer, bytes_read, 0);
                 memset(output_buffer, 0, sizeof(output_buffer));
             }
 
@@ -155,13 +157,15 @@ void handle_client(int client_socket, const int *server_running) {
         printf("Press enter to continue");
     }
     const char *closing_message = "closing";
-    if (send(client_socket, closing_message, strlen(closing_message), 0) == -1) {
+    if (send(client_args->client_socket, closing_message, strlen(closing_message), 0) == -1) {
         perror("Error sending message to client");
-        close(client_socket);
+        close(client_args->client_socket);
         exit(EXIT_FAILURE);
     }
+    printf("Client disconnected: %d\n", client_args->client_socket);
     // Close client socket
-    close(client_socket);
+    close(client_args->client_socket);
+    return NULL;
 }
 
 
@@ -177,10 +181,26 @@ void *accept_connections(void *arg) {
         perror("Error setting socket to non-blocking mode");
         exit(EXIT_FAILURE);
     }
+    //printf("debug_accept_conns_1\n");
     while (*args->server_running == 1) {
+        //printf("debug_accept_conns_2\n");
         int client_socket = accept_client_connection(args->server_socket);
         if (client_socket != -1) {
-            handle_client(client_socket, args->server_running);
+            //printf("debug_accept_conns_3\n");
+            struct ThreadArgs *client_args = (struct ThreadArgs *)malloc(sizeof(struct ThreadArgs));
+            client_args->client_socket = client_socket;
+            //printf("debug_accept_conns_4\n");
+            client_args->server_running = args->server_running;
+            //printf("debug_accept_conns_5\n");
+            //*client_args->client_running = 1;
+            //printf("debug_accept_conns_6\n");
+            pthread_t client_thread;
+            //printf("debug_accept_conns_7\n");
+            if (pthread_create(&client_thread, NULL, handle_client, (void *)client_args) != 0) {
+                perror("Error creating client thread");
+                exit(EXIT_FAILURE);
+            }
+            pthread_detach(client_thread);
         }
         usleep(1000000);
     }
