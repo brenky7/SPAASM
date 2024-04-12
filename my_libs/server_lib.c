@@ -9,7 +9,7 @@
 #include "server_lib.h"
 #include "utils.h"
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 2048
 
 int create_server_socket(int port) {
     int server_socket;
@@ -64,14 +64,64 @@ int accept_client_connection(int server_socket) {
     return client_socket;
 }
 
+struct RedirectArgs output_redirection_check(char *buffer, int pipe2) {
+    struct RedirectArgs execution_args;
+    execution_args.pipe2 = pipe2;
+    char* token = strtok(buffer, " ");
+    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char));
+    while (token != NULL) {
+        if (strcmp(token, ">") == 0) {
+            // Open the file specified for input redirection
+            execution_args.pipe2 = open(strtok(NULL, " "), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if (execution_args.pipe2 == -1) {
+                perror("Error opening file for input redirection");
+                exit(EXIT_FAILURE);
+            }
+            break; // Exit loop after finding input redirection
+        }
+        else{
+            strcat(output_buffer, token);
+            strcat(output_buffer, " ");
+        }
+        token = strtok(NULL, " ");
+    }
+    execution_args.buffer = output_buffer;
+    return execution_args;
+}
+
+
+struct RedirectArgs input_redirection_check(char *buffer, int pipe1) {
+    struct RedirectArgs execution_args;
+    execution_args.pipe1 = pipe1;
+    char* token = strtok(buffer, " ");
+    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char));
+    while (token != NULL) {
+        if (strcmp(token, "<") == 0) {
+            // Open the file specified for input redirection
+            execution_args.pipe1 = open(strtok(NULL, " "), O_RDONLY);
+            if (execution_args.pipe1 == -1) {
+                perror("Error opening file for input redirection");
+                exit(EXIT_FAILURE);
+            }
+            break; // Exit loop after finding input redirection
+        }
+        else{
+            strcat(output_buffer, token);
+            strcat(output_buffer, " ");
+        }
+        token = strtok(NULL, " ");
+    }
+    execution_args.buffer = output_buffer;
+    return execution_args;
+}
+
+
 
 void *handle_client(void *arg) {
     struct ThreadArgs *client_args = (struct ThreadArgs *)arg;
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
-    //printf("debug_handle_client_1\n");
     while (*client_args->server_running == 1) {
-        //printf("debug_handle_client_2\n");
         memset(buffer, 0, sizeof(buffer));
         // Receive message from client
         if ((bytes_received = recv(client_args->client_socket, buffer, BUFFER_SIZE, 0)) == -1) {
@@ -93,27 +143,55 @@ void *handle_client(void *arg) {
 
         buffer[bytes_received] = '\0'; // Null-terminate the received data
         printf("\nReceived message from client: %s, press enter to continue.\n", buffer);
-
         int pipefd[2];
         if (pipe(pipefd) == -1) {
             perror("Error creating pipe");
             exit(EXIT_FAILURE);
         }
-
+        printf("pipefd[0]: %d, pipefd[1]: %d\n", pipefd[0], pipefd[1]);
+        struct RedirectArgs exec_args, exec_args1, exec_args2;
+        exec_args1 = input_redirection_check(buffer, pipefd[0]);
+        exec_args2 = output_redirection_check(exec_args1.buffer, pipefd[1]);
+        exec_args.pipe1 = exec_args1.pipe1;
+        exec_args.pipe2 = exec_args2.pipe2;
+        exec_args.buffer = exec_args2.buffer;
+        printf("exec_args.pipe1: %d, exec_args.pipe2: %d\n", exec_args.pipe1, exec_args.pipe2);
+        printf("exec_args.buffer: %s\n", exec_args.buffer);
         pid_t pid = fork();
+        //printf("debug_handle_client_4\n");
         if (pid == -1) {
             perror("Error forking process");
             exit(EXIT_FAILURE);
         }
         else if (pid == 0) { // Child process
+            printf("Child process started\n");
             // Redirect standard output to pipe write end
-            close(pipefd[0]); // Close unused read end
-            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe
-            close(pipefd[1]); // Close pipe write end
+//            close(exec_args.pipe1); // Close unused read end
+//            dup2(exec_args.pipe2, STDOUT_FILENO); // Redirect stdout to pipe write end
+//            close(exec_args.pipe2); // Close pipe write end
+//            close(pipefd[0]); // Close pipe read end
+            if (exec_args.pipe1 != STDIN_FILENO) {
+                if (dup2(exec_args.pipe1, STDIN_FILENO) == -1) {
+                    perror("dup2");
+                    exit(EXIT_FAILURE);
+                }
+                close(exec_args.pipe1); // Close pipe read end
+            }
+            // Redirect output if needed
+            if (exec_args.pipe2 != STDOUT_FILENO) {
+                if (dup2(exec_args.pipe2, STDOUT_FILENO) == -1) {
+                    perror("dup2");
+                    exit(EXIT_FAILURE);
+                }
+                close(exec_args.pipe2); // Close pipe write end
+            }
+            // Close remaining pipe ends
+            close(pipefd[0]);
+            close(pipefd[1]);
             // Parse command and arguments
             char *args[BUFFER_SIZE];
             char *token;
-            token = strtok(buffer, " ");
+            token = strtok(exec_args.buffer, " ");
             int i = 0;
             while (token != NULL) {
                 args[i++] = token;
@@ -125,34 +203,43 @@ void *handle_client(void *arg) {
                 perror("Error executing command");
                 exit(EXIT_FAILURE);
             }
+            printf("Child process finished\n");
         }
         else { // Parent process
-            // Close unused write end of pipe
-            close(pipefd[1]);
-
-            // Read command output from pipe
-            char output_buffer[BUFFER_SIZE];
-            ssize_t bytes_read;
-            memset(output_buffer, 0, sizeof(output_buffer));
-            while ((bytes_read = read(pipefd[0], output_buffer, BUFFER_SIZE)) > 0) {
-                // Send output back to client
-                send(client_args->client_socket, output_buffer, bytes_read, 0);
-                memset(output_buffer, 0, sizeof(output_buffer));
-            }
-
-            // Close read end of pipe
-            close(pipefd[0]);
-
+            printf("Parent process waiting\n");
             // Wait for child process to finish
             int status;
             waitpid(pid, &status, 0);
-
+            printf("Parent process resumed\n");
             // Check if child process terminated normally
             if (WIFEXITED(status)) {
                 printf("Command execution completed\n");
             } else {
                 printf("Command execution failed\n");
             }
+
+            // Read command output from pipe
+            char output_buffer[BUFFER_SIZE];
+            memset(output_buffer, 0, sizeof(output_buffer));
+            printf("pipefd[0]: %d, exec_args.pipe1: %d\n", pipefd[0], exec_args.pipe1);
+            printf("pipefd[1]: %d, exec_args.pipe2: %d\n", pipefd[1], exec_args.pipe2);
+            ssize_t bytes_read;
+            if (pipefd[1] == exec_args.pipe2) {
+                bytes_read = read(pipefd[0], output_buffer, BUFFER_SIZE);
+                send(client_args->client_socket, output_buffer, bytes_read, 0);
+            }
+
+            // Close read end of pipe
+            close(exec_args.pipe1);
+            // Close write end of pipe
+            close(exec_args.pipe2);
+
+            if (pipefd[1] != exec_args.pipe2) {
+                bytes_read = read(pipefd[0], output_buffer, BUFFER_SIZE);
+                write(exec_args.pipe2, output_buffer, bytes_read);
+                send(client_args->client_socket, "Command executed and output redirected successfully.", 52, 0);
+            }
+
         }
         printf("Press enter to continue");
     }

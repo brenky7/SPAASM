@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
                             break;
                         }
                         send_commands(sock, command2);
-                        usleep(1500000); // Sleep for 1 second
+                        usleep(3000000); // Sleep for 3 seconds
                         command2 = strtok(NULL, delimiter);
                     }
                 } else {

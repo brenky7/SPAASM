@@ -9,6 +9,12 @@ struct ThreadArgs {
     int *client_running;
 };
 
+struct RedirectArgs {
+    char *buffer;
+    int pipe1;
+    int pipe2;
+};
+
 void displayHelp();
 void getCurrentTime(char *timeString);
 void getHostname(char *hostname, int size);
