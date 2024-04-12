@@ -70,3 +70,10 @@ bool contains_hash(const char *str) {
     }
     return false; // '#' character not found
 }
+
+long get_file_size(FILE *file) {
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    rewind(file);
+    return size;
+}

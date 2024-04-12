@@ -15,6 +15,7 @@ pthread_t thread;
 
 int main(int argc, char *argv[]) {
     int port = -1;
+    char *ip_adress = "";
     bool server = false;
     bool client = false;
     int *server_running = NULL;
@@ -43,6 +44,10 @@ int main(int argc, char *argv[]) {
                }
             } else if (strcmp(argv[i], "-h") == 0) {
                 displayHelp();
+            } else if (strcmp(argv[i], "-i") == 0){
+                if (i + 1 < argc) {
+                    ip_adress = argv[i + 1];
+                }
             }
         }
     }
@@ -59,7 +64,7 @@ int main(int argc, char *argv[]) {
             port = 60000;
             printf("Port number not specified. Using default port: %d\n", port);
         }
-        sock = create_server_socket(port);
+        sock = create_server_socket(ip_adress, port);
         printf("Server socket: %d\n", sock);
         printf("Running in server mode.\n");
         *server_running = 1;
@@ -130,6 +135,57 @@ int main(int argc, char *argv[]) {
                     }
                 } else {
                     printf("Error: Not in client mode. Use '-c' command to change.\n");
+                }
+            }
+            else if ((strcmp(token, "execfile") == 0)){
+                if (server == true) {
+                    char *filename = strtok(NULL, " ");
+                    if (filename != NULL) {
+                        FILE *file = fopen(filename, "r");
+                        if (file == NULL) {
+                            printf("Error: Could not open file.\n");
+                        } else {
+                            // Allocate memory for the buffer
+                            long file_size = get_file_size(file);
+                            char *file_buffer = (char *)malloc(file_size + 1);
+                            if (file_buffer == NULL) {
+                                perror("Error allocating memory for file buffer");
+                                exit(EXIT_FAILURE);
+                            }
+                            // Read the entire file into the buffer
+                            fread(file_buffer, 1, file_size, file);
+                            fclose(file);
+                            printf("File contents: %s\n", file_buffer);
+                            // Null-terminate the buffer
+                            file_buffer[file_size] = '\0';
+                            // Tokenize the buffer based on ";"
+                            char *delimiter = ";";
+                            char *file_buffer_copy = strdup(file_buffer); // Make a copy to preserve original
+                            char *command2 = NULL;
+                            char *token = NULL;
+
+                            // Tokenize the buffer based on ";"
+                            while ((token = strsep(&file_buffer_copy, delimiter)) != NULL) {
+                                // Ignore empty tokens
+                                if (*token != '\0') {
+                                    if (!contains_hash(token)) {
+                                        execute_command(token);
+                                        usleep(2000000); // Sleep for 3 seconds
+                                    }
+                                }
+                            }
+
+// Free allocated memory for the copy
+                            free(file_buffer_copy);
+
+                        }
+                    } else {
+                        printf("Error: No filename specified.\n");
+                        printf("Usage: execfile <filename>\n");
+                    }
+                } else {
+                    printf("Error: Not in server mode. Use '-s' command to run in server mode.\n");
+
                 }
             }
             else if (strcmp(token, "quit") == 0) {

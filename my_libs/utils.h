@@ -20,5 +20,6 @@ void getCurrentTime(char *timeString);
 void getHostname(char *hostname, int size);
 char* getPrompt();
 bool contains_hash(const char *str);
+long get_file_size(FILE *file);
 
 #endif /* MY_STRUCTS_H */
