@@ -7,23 +7,21 @@
 
 // Function to display help
 void displayHelp(void) {
-    printf("---------- Author: Peter Brenkus, xbrenkus@stuba.sk ---------\n");
-    printf("----------- Usage: ./shell [-s | -c] [-p <port>] ------------\n\n");
-    printf("Options:\n");
-    printf("  -s\tRun as server\n");
-    printf("  -c\tRun as client\n");
-    printf("  -p\tPort number\n");
-    printf("  -h\tDisplay help\n");
-    printf("Or alternatively run the program without any arguments for basic I/O mode.\n");
-    printf("\n-------------------- Supported commands ---------------------\n\n");
-    printf("  [help]\t\t\t\tDisplay help\n");
-    printf("  [port <port_number>]\t\t\tChange port number\n");
-    printf("  [connect <server_ip> <server_port>]\tConnect to server\n");
+    printf("------------------------------ FIIT STU -------------------------------\n\n");
+    printf("--------------- Author: Peter Brenkus, xbrenkus@stuba.sk --------------\n\n");
+    printf("----------- Run: ./configure [-s | -c] [-p <port>] [-i <ip>]-----------\n\n");
+    printf("---Run: make -f Makefile.mk; ./shell [-s | -c] [-p <port>] [-i <ip>]---\n\n");
+    printf("[Note: -i only for server mode]\n");
+    printf("------------------------- Supported commands --------------------------\n\n");
+    printf("  [help]\t\t\tDisplay help\n");
+    printf("  [connect <server_port>]\tConnect to server\n");
     printf("  [send <command>]\t\t\tSend command to server\n");
     printf("  [execfile <file_name>]\t\t\tExecute commands from file\n");
-    printf("  [quit]\t\t\t\tDisconnect from server\n");
-    printf("  [halt]\t\t\t\tClose all connections and shutdown [in server mode]\n");
-    printf("  [exit]\t\t\t\tExit the program\n");
+    printf("  [stat]\t\t\tDisplay active connections [server mode]\n");
+    printf("  [quit]\t\t\tDisconnect from server\n");
+    printf("  [halt]\t\t\tClose all connections and shutdown [in server mode]\n");
+    printf("  [exit]\t\t\tExit the program\n");
+    printf("  [bonus]\t\t\tDisplay optional bonuses from assignment\n");
 }
 
 // Function to get current time
@@ -57,7 +55,10 @@ char* getPrompt(void) {
     char terminationCharacter = '%';
     char *prompt = (char *) malloc(256 * sizeof(char));
 
-    snprintf(prompt, 1024, "%s %s@%s %c ", timeString, username, hostname,  terminationCharacter);
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wformat-truncation"
+    snprintf(prompt, (unsigned int)1024, "%s %s@%s %c ", timeString, username, hostname, terminationCharacter);
+    #pragma GCC diagnostic pop
     return prompt;
 }
 

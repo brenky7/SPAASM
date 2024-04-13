@@ -4,15 +4,20 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 #include "my_libs/client_lib.h"
 #include "my_libs/server_lib.h"
 #include "my_libs/utils.h"
 
-//ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-dss -c aes128-cbc xbrenkus@student.fiit.stuba.sk
-
 // Global variables
 int sock = -1; // Program instance socket descriptor
 pthread_t thread; // Thread for server/client
+volatile sig_atomic_t ctrl_c_received = 0; // Signal flag for handling SIGINT
+
+// Signal handler function for Ctrl+C
+void ctrl_c_handler(int signum) {
+    ctrl_c_received = 1;
+}
 
 // Main function, entry point of the program
 int main(int argc, char *argv[]) {
@@ -30,6 +35,7 @@ int main(int argc, char *argv[]) {
     int *client_running = NULL;
     client_running = (int *)malloc(sizeof(int));
     *client_running = 0;
+    signal(SIGINT, ctrl_c_handler);
     // Parse command line arguments
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
@@ -93,6 +99,32 @@ int main(int argc, char *argv[]) {
     //Main loop, read commands from stdin
     char command[100];
     while (1) {
+        if (ctrl_c_received) {
+            printf("Ctrl+C received. Shutting down ...\n");
+            if (server == true) {
+                *server_running = 0;
+                usleep(2000000); // Wait for server to stop
+                if (pthread_join(thread, NULL) != 0) {
+                    perror("Error joining thread");
+                    exit(EXIT_FAILURE);
+                }
+                close_server_socket(sock);
+                printf("Server socket closed and all connections terminated\n");
+                exit(EXIT_SUCCESS);
+            }
+            else {
+                *client_running = 0; // Signal client thread to stop
+                if (pthread_join(thread, NULL) != 0) {
+                    perror("Error joining client thread");
+                    exit(EXIT_FAILURE);
+                }
+                printf("Disconnected from server\n");
+                close_client_socket(sock);
+                printf("Client socket closed\n");
+                printf("Shutting down.\n");
+            }
+            break;
+        }
         char *prompt = getPrompt();
         printf("%s", prompt);
         fgets(command, sizeof(command), stdin);
@@ -136,28 +168,19 @@ int main(int argc, char *argv[]) {
             else if (strcmp(token, "send") == 0) {  // Send commands to server
                 if (client == true) {
                     char *message = strtok(NULL, "");
-                    char *delimiter = ";";
-                    char* command2 = strtok(message, delimiter);
-                    char *commands[100];
-                    for (int i = 0; i < 100; i++) {
-                        commands[i] = NULL;
+                    if (message != NULL) {
+                        char *command2 = strtok(message, ";"); // Tokenize individual commands by semicolon
+                        while (command2 != NULL) {
+                            // Process and send each command to the server
+                            //char *processed_command = process_hash(command2);
+                            printf("Sending command: %s\n", command2);
+                            send_commands(sock, command2);
+                            usleep(3000000); // Sleep for 3 seconds (adjust as needed)
+                            command2 = strtok(NULL, ";"); // Move to the next command
+                        }
+                    } else {
+                        printf("Error: No message specified.\n");
                     }
-                    int i = 0;
-                    while (command2 != NULL){
-                        commands[i] = command2;
-                        command2 = strtok(NULL, delimiter);
-                        i++;
-                    }
-                    i = 0;
-                    while (commands[i] != NULL) {
-                        //printf("Command: %s\n", commands[i]);
-                        commands[i] = process_hash(commands[i]);
-                        //printf("Processed command: %s\n", commands[i]);
-                        send_commands(sock, commands[i]);
-                        usleep(3000000); // Sleep for 3 seconds
-                        i++;
-                    }
-
                 } else {
                     printf("Error: Not in client mode. Use '-c' command to change.\n");
                 }
@@ -194,20 +217,20 @@ int main(int argc, char *argv[]) {
                             int i = 0;
                             while (command2 != NULL){
                                 commands[i] = command2;
+                                printf("command: %s\n", commands[i]);
                                 command2 = strtok(NULL, delimiter);
                                 i++;
                             }
                             i = 0;
                             while (commands[i] != NULL) {
                                 // Ignore empty tokens
-                                //printf("Command: %s\n", commands[i]);
+                                printf("Command: %s\n", commands[i]);
                                 commands[i] = process_hash(commands[i]);
-                                //printf("Processed command: %s\n", commands[i]);
+                                printf("Processed command: %s\n", commands[i]);
                                 execute_command(commands[i]);
                                 usleep(2000000); // Sleep for 3 seconds
                                 i++;
                             }
-
                             // Free allocated memory for the copy
                             free(file_buffer_copy);
                             free (file_buffer);
@@ -251,6 +274,17 @@ int main(int argc, char *argv[]) {
                 } else {
                     printf("Error: Not in server mode. Use '-s' to run in server mode.\n");
                 }
+            }
+            else if (strcmp(token, "bonus") == 0) {
+                printf("Bonusove ulohy:\n");
+                printf("Uloha 1: Neinteraktivny rezim (2b)\n");
+                printf("Uloha 3: Interny prikaz stat (3b)\n");
+                printf("Uloha 11: IP servera cez -i (2b)\n");
+                printf("Uloha 17: Prilinkovane externe kniznice (2b)\n");
+                printf("Uloha 27: Zachytenie signalu ctrl+c (??b)\n");
+                printf("Uloha 28: Funkcny makefile (2b)\n");
+                printf("Uloha 29: Konfiguracny skript (2b)\n");
+                printf("Uloha 30: Komentare v anglictine (1b)\n");
             }
             else if (strcmp(token, "") == 0) {  // Empty command
                 continue;

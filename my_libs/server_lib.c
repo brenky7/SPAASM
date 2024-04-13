@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include "server_lib.h"
 #include "utils.h"
@@ -81,7 +82,8 @@ struct RedirectArgs output_redirection_check(char *buffer, int pipe2) {
     struct RedirectArgs execution_args;
     execution_args.pipe2 = pipe2;
     char* token = strtok(buffer, " ");
-    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char));
+    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char)); // Allocate memory
+    memset(output_buffer, 0, BUFFER_SIZE);
     while (token != NULL) {
         if (strcmp(token, ">") == 0) {
             // Open the file specified for input redirection
@@ -107,7 +109,8 @@ struct RedirectArgs input_redirection_check(char *buffer, int pipe1) {
     struct RedirectArgs execution_args;
     execution_args.pipe1 = pipe1;
     char* token = strtok(buffer, " ");
-    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char));
+    char* output_buffer = malloc(BUFFER_SIZE * sizeof(char)); // Allocate memory
+    memset(output_buffer, 0, BUFFER_SIZE);
     while (token != NULL) {
         if (strcmp(token, "<") == 0) {
             // Open the file specified for input redirection
@@ -117,8 +120,7 @@ struct RedirectArgs input_redirection_check(char *buffer, int pipe1) {
                 exit(EXIT_FAILURE);
             }
             break; // Exit loop after finding input redirection
-        }
-        else{
+        } else{
             strcat(output_buffer, token);
             strcat(output_buffer, " ");
         }
@@ -134,6 +136,16 @@ void *handle_client(void *arg) {
     struct ThreadArgs *client_args = (struct ThreadArgs *)arg;
     char buffer[BUFFER_SIZE];
     ssize_t bytes_received;
+    int flags = fcntl(client_args->client_socket, F_GETFL, 0);
+    if (flags == -1) {
+        perror("Error getting socket flags");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fcntl(client_args->client_socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("Error setting socket to non-blocking mode");
+        exit(EXIT_FAILURE);
+    }
     while (*client_args->server_running == 1) {
         memset(buffer, 0, sizeof(buffer));
         // Receive message from client
@@ -161,8 +173,9 @@ void *handle_client(void *arg) {
             perror("Error creating pipe");
             exit(EXIT_FAILURE);
         }
+        char *buffer2 = process_hash(buffer);
         //printf("pipefd[0]: %d, pipefd[1]: %d\n", pipefd[0], pipefd[1]);
-        struct RedirectArgs exec_args = define_redirection(buffer, pipefd);
+        struct RedirectArgs exec_args = define_redirection(buffer2, pipefd);
         //printf("exec_args.pipe1: %d, exec_args.pipe2: %d\n", exec_args.pipe1, exec_args.pipe2);
         // Fork a new process to execute the command
         pid_t pid = fork();
@@ -236,9 +249,7 @@ void *handle_client(void *arg) {
                 write(exec_args.pipe2, output_buffer, bytes_read);
                 send(client_args->client_socket, "Command executed and output redirected successfully.", 52, 0);
             }
-
         }
-        printf("Press enter to continue");
     }
     // Send halt signal to client
     const char *closing_message = "closing";
@@ -297,20 +308,26 @@ void *accept_connections(void *arg) {
         }
         usleep(1000000);
     }
+    usleep(2000000);
     return NULL;
 }
 
 // Function to execute a command from file
 void execute_command(char *command){
+    //printf("debug exec command1\n");
     // Create a pipe for inter-process communication
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("Error creating pipe");
         exit(EXIT_FAILURE);
     }
+    //printf("debug exec command2\n");
     struct RedirectArgs exec_args = define_redirection(command, pipefd);
     // Fork a new process to execute the command
     pid_t pid = fork();
+    //printf("exec_args.pipe1: %d, exec_args.pipe2: %d\n", exec_args.pipe1, exec_args.pipe2);
+    //printf("exec_args.buffer: %s\n", exec_args.buffer);
+    //printf("debug exec command3\n");
     if (pid == -1) {
         perror("Error forking process");
         exit(EXIT_FAILURE);
