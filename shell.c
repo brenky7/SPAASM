@@ -15,6 +15,9 @@ pthread_t thread;
 
 int main(int argc, char *argv[]) {
     int port = -1;
+    int *client_sockets = (int *)malloc(MAX_CLIENTS * sizeof(int));
+    int *num_clients = (int *)malloc(sizeof(int));
+    *num_clients = 0;
     char *ip_adress = "";
     bool server = false;
     bool client = false;
@@ -71,6 +74,10 @@ int main(int argc, char *argv[]) {
         struct ThreadArgs args;
         args.server_socket = sock;
         args.server_running = server_running;
+        args.num_clients = num_clients;
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            args.client_sockets[i] = &client_sockets[i];
+        }
         if (pthread_create(&thread, NULL, accept_connections, (void *)&args) != 0) {
             perror("Error creating accept thread");
             exit(EXIT_FAILURE);
@@ -79,7 +86,6 @@ int main(int argc, char *argv[]) {
 
     char command[100];
     while (1) {
-
         char *prompt = getPrompt();
         printf("%s", prompt);
         fgets(command, sizeof(command), stdin);
@@ -161,7 +167,7 @@ int main(int argc, char *argv[]) {
                             // Tokenize the buffer based on ";"
                             char *delimiter = ";";
                             char *file_buffer_copy = strdup(file_buffer); // Make a copy to preserve original
-                            char *command2 = NULL;
+                            //char *command2 = NULL;
                             char *token = NULL;
 
                             // Tokenize the buffer based on ";"
@@ -175,7 +181,7 @@ int main(int argc, char *argv[]) {
                                 }
                             }
 
-// Free allocated memory for the copy
+                            // Free allocated memory for the copy
                             free(file_buffer_copy);
 
                         }
@@ -184,7 +190,7 @@ int main(int argc, char *argv[]) {
                         printf("Usage: execfile <filename>\n");
                     }
                 } else {
-                    printf("Error: Not in server mode. Use '-s' command to run in server mode.\n");
+                    printf("Error: Not in server mode. Use '-s' to run in server mode.\n");
 
                 }
             }
@@ -221,6 +227,16 @@ int main(int argc, char *argv[]) {
             }
             else if (strcmp(token, "") == 0) {
                 continue;
+            }
+            else if (strcmp(token, "stat") == 0){
+                if (server == true) {
+                    printf("Number of active connections: %d\n", *num_clients);
+                    for (int i = 0; i < *num_clients; ++i) {
+                        printf("Client %d: Socket %d\n", i + 1, client_sockets[i]);
+                    }
+                } else {
+                    printf("Error: Not in server mode. Use '-s' to run in server mode.\n");
+                }
             }
             else {
                 printf("Unknown command: %s\n", token);

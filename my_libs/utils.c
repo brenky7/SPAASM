@@ -18,12 +18,10 @@ void displayHelp() {
     printf("Or alternatively run the program without any arguments for basic I/O mode.\n");
     printf("\n-------------------- Supported commands ---------------------\n\n");
     printf("  [help]\t\t\t\tDisplay help\n");
-    printf("  [server]\t\t\t\tRun in server mode\n");
-    printf("  [client]\t\t\t\tRun in client mode\n");
     printf("  [port <port_number>]\t\t\tChange port number\n");
-    printf("  [sock]\t\t\t\tCreate sock\n");
-    printf("  [listen]\t\t\t\tStart listening for incoming connections\n");
     printf("  [connect <server_ip> <server_port>]\tConnect to server\n");
+    printf("  [send <command>]\t\t\tSend command to server\n");
+    printf("  [execfile <file_name>]\t\t\tExecute commands from file\n");
     printf("  [quit]\t\t\t\tDisconnect from server\n");
     printf("  [halt]\t\t\t\tClose all connections and shutdown [in server mode]\n");
     printf("  [exit]\t\t\t\tExit the program\n");

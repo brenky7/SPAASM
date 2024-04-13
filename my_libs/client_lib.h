@@ -1,7 +1,8 @@
 #ifndef CLIENT_LIB_H
 #define CLIENT_LIB_H
 
-//int openSocket(const char *serverIP);
+#include "utils.h"
+
 int create_client_socket(int port);
 void connect_to_server(int client_socket, int server_port);
 void send_commands(int client_socket, const char *message);

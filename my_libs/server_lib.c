@@ -245,6 +245,7 @@ void *handle_client(void *arg) {
         exit(EXIT_FAILURE);
     }
     printf("Client disconnected: %d\n", client_args->client_socket);
+    remove_client_socket(client_args->client_socket, client_args->client_sockets, client_args->num_clients);
     // Close client socket
     close(client_args->client_socket);
     return NULL;
@@ -266,9 +267,20 @@ void *accept_connections(void *arg) {
     while (*args->server_running == 1) {
         int client_socket = accept_client_connection(args->server_socket);
         if (client_socket != -1) {
+            if (*args->num_clients < MAX_CLIENTS) {
+                *args->client_sockets[*args->num_clients] = client_socket; // Update client socket
+                (*args->num_clients)++;
+            } else {
+                printf("Maximum number of clients reached. Ignoring new connection.\n");
+                close(client_socket);
+            }
             struct ThreadArgs *client_args = (struct ThreadArgs *)malloc(sizeof(struct ThreadArgs));
             client_args->client_socket = client_socket;
             client_args->server_running = args->server_running;
+            client_args->num_clients = args->num_clients;
+            for (int i = 0; i < MAX_CLIENTS; i++) {
+                client_args->client_sockets[i] = args->client_sockets[i];
+            }
             pthread_t client_thread;
             if (pthread_create(&client_thread, NULL, handle_client, (void *)client_args) != 0) {
                 perror("Error creating client thread");
@@ -365,4 +377,23 @@ void execute_command(char *command){
 
 void close_server_socket(int client_socket) {
     close(client_socket);
+}
+
+void remove_client_socket(int client_socket, int *client_sockets[], int *num_clients) {
+    // Find the index of the client socket in the array
+    int index = -1;
+    for (int i = 0; i < *num_clients; i++) {
+        if (*client_sockets[i] == client_socket) {
+            index = i;
+            break;
+        }
+    }
+    if (index != -1) {
+        // Shift elements to the left to fill the gap
+        for (int i = index; i < *num_clients - 1; i++) {
+            *client_sockets[i] = *client_sockets[i + 1];
+        }
+        // Decrement the number of clients
+        (*num_clients)--;
+    }
 }
