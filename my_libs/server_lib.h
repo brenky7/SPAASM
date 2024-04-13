@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include "utils.h"
 
-
+// Function prototypes
 int create_server_socket(const char *ip_address, int port) ;
 int accept_client_connection(int server_socket);
 struct RedirectArgs define_redirection(char *buffer, int pipefd[2]);

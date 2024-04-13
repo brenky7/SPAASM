@@ -2,12 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <stdbool.h>
 #include <unistd.h>
 #include "utils.h"
 
-
-void displayHelp() {
+// Function to display help
+void displayHelp(void) {
     printf("---------- Author: Peter Brenkus, xbrenkus@stuba.sk ---------\n");
     printf("----------- Usage: ./shell [-s | -c] [-p <port>] ------------\n\n");
     printf("Options:\n");
@@ -27,7 +26,7 @@ void displayHelp() {
     printf("  [exit]\t\t\t\tExit the program\n");
 }
 
-
+// Function to get current time
 void getCurrentTime(char *timeString) {
     time_t currentTime;
     struct tm *localTime;
@@ -36,6 +35,7 @@ void getCurrentTime(char *timeString) {
     strftime(timeString, 9, "%H:%M", localTime);
 }
 
+// Function to get hostname
 void getHostname(char *hostname, int size) {
     if (gethostname(hostname, size) != 0) {
         perror("Error getting hostname");
@@ -43,15 +43,17 @@ void getHostname(char *hostname, int size) {
     }
 }
 
-char* getPrompt() {
+// Function to create prompt
+char* getPrompt(void) {
+    // Get user
     char *username = getenv("USER");
-
+    // Get host
     char hostname[1024];
     getHostname(hostname, sizeof(hostname));
-
+    // Get time
     char timeString[9];
     getCurrentTime(timeString);
-
+    // Create prompt
     char terminationCharacter = '%';
     char *prompt = (char *) malloc(256 * sizeof(char));
 
@@ -59,16 +61,39 @@ char* getPrompt() {
     return prompt;
 }
 
-bool contains_hash(const char *str) {
-    while (*str != '\0') {
-        if (*str == '#' && *(str -1) != '\\') {
-            return true; // Found the '#' character
-        }
-        str++; // Move to the next character
+// Function to process the command for # character
+char* process_hash(char* command) {
+    // Allocate memory for the result
+    char* result = (char*)malloc(strlen(command) + 1);
+    if (result == NULL) {
+        perror("Memory allocation error");
+        exit(EXIT_FAILURE);
     }
-    return false; // '#' character not found
+    strcpy(result, ""); // Initialize result as empty string
+
+    // Tokenize the command based on whitespace
+    char* token = strtok(command, " ");
+    while (token != NULL) {
+        // Check if the token contains '#'
+        if (strchr(token, '#') != NULL) {
+            break; // Stop processing if '#' is found
+        } else {
+            // Append the token to the result
+            strcat(result, token);
+            strcat(result, " ");
+        }
+        token = strtok(NULL, " ");
+    }
+
+    // Remove trailing whitespace
+    if (strlen(result) > 0) {
+        result[strlen(result) - 1] = '\0';
+    }
+
+    return result;
 }
 
+// Function to get file size
 long get_file_size(FILE *file) {
     fseek(file, 0, SEEK_END);
     long size = ftell(file);

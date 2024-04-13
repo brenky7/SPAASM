@@ -10,10 +10,13 @@
 
 //ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 -oHostKeyAlgorithms=+ssh-dss -c aes128-cbc xbrenkus@student.fiit.stuba.sk
 
-int sock = -1;
-pthread_t thread;
+// Global variables
+int sock = -1; // Program instance socket descriptor
+pthread_t thread; // Thread for server/client
 
+// Main function, entry point of the program
 int main(int argc, char *argv[]) {
+    // Initialize variables
     int port = -1;
     int *client_sockets = (int *)malloc(MAX_CLIENTS * sizeof(int));
     int *num_clients = (int *)malloc(sizeof(int));
@@ -27,13 +30,15 @@ int main(int argc, char *argv[]) {
     int *client_running = NULL;
     client_running = (int *)malloc(sizeof(int));
     *client_running = 0;
+    // Parse command line arguments
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i], "-s") == 0) {
+            // Check for command line options
+            if (strcmp(argv[i], "-s") == 0) {   // Server mode
                 server = true;
-            } else if (strcmp(argv[i], "-c") == 0) {
+            } else if (strcmp(argv[i], "-c") == 0) {    // Client mode
                 client = true;
-            } else if (strcmp(argv[i], "-p") == 0) {
+            } else if (strcmp(argv[i], "-p") == 0) {    // Port number
                if (i + 1 < argc) {
                    port = atoi(argv[i + 1]);
                    if (port < 0) {
@@ -45,25 +50,26 @@ int main(int argc, char *argv[]) {
                else{
                      printf("No port number specified... use 'port' command to change.\n");
                }
-            } else if (strcmp(argv[i], "-h") == 0) {
+            } else if (strcmp(argv[i], "-h") == 0) {    // Display help
                 displayHelp();
-            } else if (strcmp(argv[i], "-i") == 0){
+            } else if (strcmp(argv[i], "-i") == 0){ // IP address of server
                 if (i + 1 < argc) {
                     ip_adress = argv[i + 1];
                 }
             }
         }
     }
-    if (server == true && client == true) {
+    if (server == true && client == true) { // Check if both -s and -c were specified
         printf("Cannot run in both server and client mode.\n");
         exit(EXIT_FAILURE);
     }
-    else if (server == false && client == true) {
+    else if (server == false && client == true) {   // Check if client mode was specified
         sock = create_client_socket(port);
         printf("Running in client mode.\n");
     }
+    // If server mode was specified
     else if ((client == false && server == true) || (client == false && server == false)) {
-        if (port == -1) {
+        if (port == -1) {   // Check if port number was specified
             port = 60000;
             printf("Port number not specified. Using default port: %d\n", port);
         }
@@ -78,28 +84,29 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < MAX_CLIENTS; i++) {
             args.client_sockets[i] = &client_sockets[i];
         }
+        // Create a thread for accepting connections
         if (pthread_create(&thread, NULL, accept_connections, (void *)&args) != 0) {
             perror("Error creating accept thread");
             exit(EXIT_FAILURE);
         }
     }
-
+    //Main loop, read commands from stdin
     char command[100];
     while (1) {
         char *prompt = getPrompt();
         printf("%s", prompt);
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = '\0';
-        char *token = strtok(command, " ");
+        char *token = strtok(command, " "); // Tokenize the command based on whitespace
         if (token != NULL) {
-            if (strcmp(token, "help") == 0) {
+            if (strcmp(token, "help") == 0) {   // Display help
                 displayHelp();
             }
-            else if (strcmp(token, "exit") == 0) {
+            else if (strcmp(token, "exit") == 0) {  // Exit the program
                 printf("Shutting down.\n");
                 break;
             }
-            else if (strcmp(token, "connect") == 0) {
+            else if (strcmp(token, "connect") == 0) {   // Connect to server
                 if (client == true) {
                     char *port_str = strtok(NULL, " ");
                     if (port_str != NULL) {
@@ -126,24 +133,36 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            else if (strcmp(token, "send") == 0) {
+            else if (strcmp(token, "send") == 0) {  // Send commands to server
                 if (client == true) {
                     char *message = strtok(NULL, "");
                     char *delimiter = ";";
                     char* command2 = strtok(message, delimiter);
-                    while (command2 != NULL) {
-                        if (contains_hash(command2) == true) {
-                            break;
-                        }
-                        send_commands(sock, command2);
-                        usleep(3000000); // Sleep for 3 seconds
-                        command2 = strtok(NULL, delimiter);
+                    char *commands[100];
+                    for (int i = 0; i < 100; i++) {
+                        commands[i] = NULL;
                     }
+                    int i = 0;
+                    while (command2 != NULL){
+                        commands[i] = command2;
+                        command2 = strtok(NULL, delimiter);
+                        i++;
+                    }
+                    i = 0;
+                    while (commands[i] != NULL) {
+                        //printf("Command: %s\n", commands[i]);
+                        commands[i] = process_hash(commands[i]);
+                        //printf("Processed command: %s\n", commands[i]);
+                        send_commands(sock, commands[i]);
+                        usleep(3000000); // Sleep for 3 seconds
+                        i++;
+                    }
+
                 } else {
                     printf("Error: Not in client mode. Use '-c' command to change.\n");
                 }
             }
-            else if ((strcmp(token, "execfile") == 0)){
+            else if ((strcmp(token, "execfile") == 0)){ // Execute commands from file
                 if (server == true) {
                     char *filename = strtok(NULL, " ");
                     if (filename != NULL) {
@@ -167,23 +186,31 @@ int main(int argc, char *argv[]) {
                             // Tokenize the buffer based on ";"
                             char *delimiter = ";";
                             char *file_buffer_copy = strdup(file_buffer); // Make a copy to preserve original
-                            //char *command2 = NULL;
-                            char *token = NULL;
-
-                            // Tokenize the buffer based on ";"
-                            while ((token = strsep(&file_buffer_copy, delimiter)) != NULL) {
+                            char *command2 = strtok(file_buffer_copy, delimiter);
+                            char *commands[100];
+                            for (int i = 0; i < 100; i++) {
+                                commands[i] = NULL;
+                            }
+                            int i = 0;
+                            while (command2 != NULL){
+                                commands[i] = command2;
+                                command2 = strtok(NULL, delimiter);
+                                i++;
+                            }
+                            i = 0;
+                            while (commands[i] != NULL) {
                                 // Ignore empty tokens
-                                if (*token != '\0') {
-                                    if (!contains_hash(token)) {
-                                        execute_command(token);
-                                        usleep(2000000); // Sleep for 3 seconds
-                                    }
-                                }
+                                //printf("Command: %s\n", commands[i]);
+                                commands[i] = process_hash(commands[i]);
+                                //printf("Processed command: %s\n", commands[i]);
+                                execute_command(commands[i]);
+                                usleep(2000000); // Sleep for 3 seconds
+                                i++;
                             }
 
                             // Free allocated memory for the copy
                             free(file_buffer_copy);
-
+                            free (file_buffer);
                         }
                     } else {
                         printf("Error: No filename specified.\n");
@@ -194,7 +221,7 @@ int main(int argc, char *argv[]) {
 
                 }
             }
-            else if (strcmp(token, "quit") == 0) {
+            else if (strcmp(token, "quit") == 0) {  // Disconnect from server
                 if (client == true) {
                     *client_running = 0; // Signal client thread to stop
                     if (pthread_join(thread, NULL) != 0) {
@@ -210,7 +237,7 @@ int main(int argc, char *argv[]) {
                     printf("Error: Not in client mode. Use '-c' to run in client mode.\n");
                 }
             }
-            else if (strcmp(token, "halt") == 0) {
+            else if (strcmp(token, "halt") == 0) {  // Close all connections and shutdown
                 if (server == true) {
                     *server_running = 0;
                     usleep(2000000); // Wait for server to stop
@@ -225,10 +252,10 @@ int main(int argc, char *argv[]) {
                     printf("Error: Not in server mode. Use '-s' to run in server mode.\n");
                 }
             }
-            else if (strcmp(token, "") == 0) {
+            else if (strcmp(token, "") == 0) {  // Empty command
                 continue;
             }
-            else if (strcmp(token, "stat") == 0){
+            else if (strcmp(token, "stat") == 0){   // Display active connections
                 if (server == true) {
                     printf("Number of active connections: %d\n", *num_clients);
                     for (int i = 0; i < *num_clients; ++i) {
@@ -238,7 +265,7 @@ int main(int argc, char *argv[]) {
                     printf("Error: Not in server mode. Use '-s' to run in server mode.\n");
                 }
             }
-            else {
+            else {  // Unknown command
                 printf("Unknown command: %s\n", token);
             }
         }

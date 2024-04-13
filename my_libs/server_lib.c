@@ -11,6 +11,7 @@
 
 #define BUFFER_SIZE 2048
 
+// Function for creating a server socket
 int create_server_socket(const char *ip_address, int port) {
     int server_socket;
     struct sockaddr_in server_addr;
@@ -44,7 +45,7 @@ int create_server_socket(const char *ip_address, int port) {
     return server_socket;
 }
 
-
+// Function for accepting incoming client connections
 int accept_client_connection(int server_socket) {
     int client_socket;
     struct sockaddr_in client_addr;
@@ -64,7 +65,7 @@ int accept_client_connection(int server_socket) {
     return client_socket;
 }
 
-
+// Wrapper function for handling i/o redirection
 struct RedirectArgs define_redirection(char *buffer, int pipefd[2]){
     struct RedirectArgs args1, args2, args;
     args1 = input_redirection_check(buffer, pipefd[0]);
@@ -75,7 +76,7 @@ struct RedirectArgs define_redirection(char *buffer, int pipefd[2]){
     return args;
 }
 
-
+// Function to check for output redirection
 struct RedirectArgs output_redirection_check(char *buffer, int pipe2) {
     struct RedirectArgs execution_args;
     execution_args.pipe2 = pipe2;
@@ -101,7 +102,7 @@ struct RedirectArgs output_redirection_check(char *buffer, int pipe2) {
     return execution_args;
 }
 
-
+// Function to check for input redirection
 struct RedirectArgs input_redirection_check(char *buffer, int pipe1) {
     struct RedirectArgs execution_args;
     execution_args.pipe1 = pipe1;
@@ -128,7 +129,7 @@ struct RedirectArgs input_redirection_check(char *buffer, int pipe1) {
 }
 
 
-
+// Function for handling a client
 void *handle_client(void *arg) {
     struct ThreadArgs *client_args = (struct ThreadArgs *)arg;
     char buffer[BUFFER_SIZE];
@@ -163,6 +164,7 @@ void *handle_client(void *arg) {
         //printf("pipefd[0]: %d, pipefd[1]: %d\n", pipefd[0], pipefd[1]);
         struct RedirectArgs exec_args = define_redirection(buffer, pipefd);
         //printf("exec_args.pipe1: %d, exec_args.pipe2: %d\n", exec_args.pipe1, exec_args.pipe2);
+        // Fork a new process to execute the command
         pid_t pid = fork();
         if (pid == -1) {
             perror("Error forking process");
@@ -238,6 +240,7 @@ void *handle_client(void *arg) {
         }
         printf("Press enter to continue");
     }
+    // Send halt signal to client
     const char *closing_message = "closing";
     if (send(client_args->client_socket, closing_message, strlen(closing_message), 0) == -1) {
         perror("Error sending message to client");
@@ -251,9 +254,10 @@ void *handle_client(void *arg) {
     return NULL;
 }
 
-
+// Function for accepting incoming client connections
 void *accept_connections(void *arg) {
     struct ThreadArgs *args = (struct ThreadArgs *)arg;
+    // Set server socket to non-blocking mode
     int flags = fcntl(args->server_socket, F_GETFL, 0);
     if (flags == -1) {
         perror("Error getting socket flags");
@@ -264,9 +268,11 @@ void *accept_connections(void *arg) {
         perror("Error setting socket to non-blocking mode");
         exit(EXIT_FAILURE);
     }
+    // Accept incoming connections
     while (*args->server_running == 1) {
         int client_socket = accept_client_connection(args->server_socket);
         if (client_socket != -1) {
+            // Add client socket to the array
             if (*args->num_clients < MAX_CLIENTS) {
                 *args->client_sockets[*args->num_clients] = client_socket; // Update client socket
                 (*args->num_clients)++;
@@ -274,6 +280,7 @@ void *accept_connections(void *arg) {
                 printf("Maximum number of clients reached. Ignoring new connection.\n");
                 close(client_socket);
             }
+            // Create a new thread to handle the client
             struct ThreadArgs *client_args = (struct ThreadArgs *)malloc(sizeof(struct ThreadArgs));
             client_args->client_socket = client_socket;
             client_args->server_running = args->server_running;
@@ -293,13 +300,16 @@ void *accept_connections(void *arg) {
     return NULL;
 }
 
+// Function to execute a command from file
 void execute_command(char *command){
+    // Create a pipe for inter-process communication
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("Error creating pipe");
         exit(EXIT_FAILURE);
     }
     struct RedirectArgs exec_args = define_redirection(command, pipefd);
+    // Fork a new process to execute the command
     pid_t pid = fork();
     if (pid == -1) {
         perror("Error forking process");
@@ -375,10 +385,12 @@ void execute_command(char *command){
     }
 }
 
+// Function to close the server socket
 void close_server_socket(int client_socket) {
     close(client_socket);
 }
 
+// Function to remove a client socket from the array
 void remove_client_socket(int client_socket, int *client_sockets[], int *num_clients) {
     // Find the index of the client socket in the array
     int index = -1;

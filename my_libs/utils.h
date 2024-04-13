@@ -1,18 +1,19 @@
 #ifndef MY_STRUCTS_H
 #define MY_STRUCTS_H
-#include <stdbool.h>
 #include <stdio.h>
 
+// Constants
 #define MAX_CLIENTS 10
 
+// Function prototypes
 void displayHelp(void);
 void getCurrentTime(char *timeString);
 void getHostname(char *hostname, int size);
 char* getPrompt(void);
-bool contains_hash(const char *str);
+char* process_hash(char* command);
 long get_file_size(FILE *file);
 
-
+// Struct for thread arguments
 struct ThreadArgs {
     int server_socket;
     int client_socket;
@@ -22,6 +23,7 @@ struct ThreadArgs {
     int *client_sockets[MAX_CLIENTS];
 };
 
+// Struct for redirect arguments
 struct RedirectArgs {
     char *buffer;
     int pipe1;
